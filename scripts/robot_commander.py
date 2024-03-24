@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 
 from enum import Enum
 import time
@@ -298,8 +299,34 @@ class RobotCommander(Node):
         return
     
 def main(args=None):
-    
-    rclpy.init(args=args)
+
+    points_txt = open("./points.txt")
+
+    # EXTRACT POINTS
+
+    points = []
+
+    f = points_txt
+    Lines = f.readlines()
+
+    count = 0
+    # Strips the newline character
+    for line in Lines:
+        count += 1
+        line_ = line.split()
+        if line_[0] == "x:":
+            points.append([0, 0])
+            points[len(points) - 1][0] = float(line_[1])
+        if line_[0] == "y:":
+            points[len(points) - 1][1] = float(line_[1])
+
+    print(points)
+
+    for p in points:
+        move(p[0], p[1])
+
+def move(x, y):
+    rclpy.init()
     rc = RobotCommander()
 
     # Wait until Nav2 and Localizer are available
@@ -318,9 +345,9 @@ def main(args=None):
     goal_pose.header.frame_id = 'map'
     goal_pose.header.stamp = rc.get_clock().now().to_msg()
 
-    goal_pose.pose.position.x = 2.6
-    goal_pose.pose.position.y = -1.3
-    goal_pose.pose.orientation = rc.YawToQuaternion(0.57)
+    goal_pose.pose.position.x = x
+    goal_pose.pose.position.y = y
+    goal_pose.pose.orientation = rc.YawToQuaternion(random.random())
 
     rc.goToPose(goal_pose)
 
