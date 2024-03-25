@@ -86,7 +86,10 @@ class RobotCommander(Node):
         self.undock_action_client = ActionClient(self, Undock, 'undock')
         self.dock_action_client = ActionClient(self, Dock, 'dock')
 
+        self.points = []
+        
         self.get_logger().info(f"Robot commander has been initialized!")
+
         
     def destroyNode(self):
         self.nav_to_pose_client.destroy()
@@ -296,68 +299,100 @@ class RobotCommander(Node):
 
     def debug(self, msg):
         self.get_logger().debug(msg)
-        return
+        return    
+    
+	#EXTRACT POINTS
+	def getPointsFromFile():
+	
+	    points_txt = open("./points.txt")
+			
+		self.points = []
+
+		f = points_txt
+		Lines = f.readlines()
+
+		for line in Lines:
+		    line_ = line.split()
+		    if line_[0] == "x:":
+		        points.append([0, 0])
+		        points[len(points) - 1][0] = float(line_[1])
+		    if line_[0] == "y:":
+		        points[len(points) - 1][1] = float(line_[1])
+    
+    # MOVE ROBOT TO POINT
+    def moveToPoint(self):
+    
+    	x = self.points[0][0]
+    	y = self.points[0][1]
+
+		# Wait until Nav2 and Localizer are available
+		self.waitUntilNav2Active()
+
+		# Check if the robot is docked, only continue when a message is recieved
+		while self.is_docked is None:
+		    rclpy.spin_once(self, timeout_sec=0.5)
+
+		# If it is docked, undock it first
+		if self.is_docked:
+		    self.undock()
+		
+		# Finally send it a goal to reach
+		goal_pose = PoseStamped()
+		goal_pose.header.frame_id = 'map'
+		goal_pose.header.stamp = self.get_clock().now().to_msg()
+
+		goal_pose.pose.position.x = x
+		goal_pose.pose.position.y = y
+		goal_pose.pose.orientation = self.YawToQuaternion(random.random())
+
+		self.goToPose(goal_pose)
+		
+		complete = self.isTaskComplete()
+		detected = self.isFaceDetected()
+
+		while not complete and not detected:
+		    self.info("Waiting for the task to complete...")
+		    time.sleep(.1)
+		    
+		    complete = self.isTaskComplete()
+		    detected = self.isFaceDetected()
+		    
+		    
+		    
+		
+		if not detected:
+			points.pop(0)
+		
+		#self.spin(-0.57)
+
+		return
+		
+	# DETECT FACE
+	def isFaceDetected():
+	
+		return False
+		
+		        
+	
+	# CIRCLE AROUND THE ARENA
+	def circuit():
+		while len(self.points) != 0:
+			move_to_point()
+			
+   
     
 def main(args=None):
-
-    points_txt = open("./points.txt")
-
-    # EXTRACT POINTS
-
-    points = []
-
-    f = points_txt
-    Lines = f.readlines()
-
-    count = 0
-    # Strips the newline character
-    for line in Lines:
-        count += 1
-        line_ = line.split()
-        if line_[0] == "x:":
-            points.append([0, 0])
-            points[len(points) - 1][0] = float(line_[1])
-        if line_[0] == "y:":
-            points[len(points) - 1][1] = float(line_[1])
-
-    print(points)
-
-    for p in points:
-        move(p[0], p[1])
-
-def move(x, y):
+            
     rclpy.init()
     rc = RobotCommander()
 
-    # Wait until Nav2 and Localizer are available
-    rc.waitUntilNav2Active()
-
-    # Check if the robot is docked, only continue when a message is recieved
-    while rc.is_docked is None:
-        rclpy.spin_once(rc, timeout_sec=0.5)
-
-    # If it is docked, undock it first
-    if rc.is_docked:
-        rc.undock()
-    
-    # Finally send it a goal to reach
-    goal_pose = PoseStamped()
-    goal_pose.header.frame_id = 'map'
-    goal_pose.header.stamp = rc.get_clock().now().to_msg()
-
-    goal_pose.pose.position.x = x
-    goal_pose.pose.position.y = y
-    goal_pose.pose.orientation = rc.YawToQuaternion(random.random())
-
-    rc.goToPose(goal_pose)
-
-    while not rc.isTaskComplete():
-        rc.info("Waiting for the task to complete...")
-        time.sleep(1)
-
-    rc.spin(-0.57)
-
+	rc.getPointsFromFile()
+    rc.circuit()
+        
+        
     rc.destroyNode()
+
+
 
     # And a simple example
 if __name__=="__main__":
