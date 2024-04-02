@@ -17,6 +17,10 @@ import random
 
 import playsound
 
+import os
+
+from scipy.spatial.transform import Rotation as R
+
 
 from enum import Enum
 import time
@@ -31,7 +35,7 @@ from turtle_tf2_py.turtle_tf2_broadcaster import quaternion_from_euler
 from irobot_create_msgs.action import Dock, Undock
 from irobot_create_msgs.msg import DockStatus
 
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker, MarkerArray
 
 import rclpy
 from rclpy.action import ActionClient
@@ -57,6 +61,10 @@ amcl_pose_qos = QoSProfile(
 class RobotCommander(Node):
 
     def __init__(self, node_name='robot_commander', namespace=''):
+
+
+        self.last_marker = 1
+
         super().__init__(node_name=node_name, namespace=namespace)
         
         self.pose_frame_id = 'map'
@@ -75,8 +83,8 @@ class RobotCommander(Node):
                                  self._dockCallback,
                                  qos_profile_sensor_data)
         
-        self.create_subscription(Marker,
-                                 'breadcrumbs',
+        self.create_subscription(MarkerArray,
+                                 'people_markers',
                                  self.peopleMarkerCallback,
                                  qos_profile_sensor_data)
         
@@ -314,7 +322,8 @@ class RobotCommander(Node):
     #EXTRACT POINTS
     def getPointsFromFile(self):
 
-        points_txt = open("./points.txt")
+        #print(os.getcwd())
+        points_txt = open("points.txt")
 
         self.points = []
 
@@ -324,16 +333,24 @@ class RobotCommander(Node):
         for line in Lines:
             line_ = line.split()
             if line_[0] == "x:":
-                self.points.append([0, 0])
-                self.points[len(self.points) - 1][0] = float(line_[1])
+
+                self.points.append([[0, 0], False])
+
+                last = self.points[len(self.points)-1]
+
+                last[0][0] = float(line_[1])
             if line_[0] == "y:":
-                self.points[len(self.points) - 1][1] = float(line_[1])
+                last = self.points[len(self.points) - 1]
+
+                last[0][1] = float(line_[1])
     
     # MOVE ROBOT TO POINT
     def moveToPoint(self):
+
+        pos = self.points[0][0]
     
-        x = self.points[0][0]
-        y = self.points[0][1]
+        x = pos[0]
+        y = pos[1]
 
         # Wait until Nav2 and Localizer are available
         self.waitUntilNav2Active()
@@ -361,13 +378,16 @@ class RobotCommander(Node):
         detected = self.isFaceDetected()
 
         while not complete and not detected:
-            self.info("Waiting for the task to complete...")
+            #self.info("Waiting for the task to complete...")
             time.sleep(.1)
 
             complete = self.isTaskComplete()
             detected = self.isFaceDetected()
 
         if not detected:
+            if self.points[0][1] == True:
+                playsound.playsound("greeting.wav")
+                time.sleep(1)
             self.points.pop(0)
 
         #self.spin(-0.57)
@@ -375,17 +395,36 @@ class RobotCommander(Node):
         return
 
 
+
     def peopleMarkerCallback(self, msg):
-        self.detected_point = [msg.pose.position.x, msg.pose.position.y]
+        self.markers_array = msg.markers
 
 
 
     # DETECT FACE
     def isFaceDetected(self):
-        if self.detected_point is not None:
-            self.points.insert(0, self.detected_point)
-            playsound.playsound("greeting.wav")
-            self.detected_point = None
+
+        ms = self.markers_array
+
+        if len(ms) == self.last_marker:
+
+            last = ms[len(ms)-1]
+
+
+
+            rot = R.from_quat([last.pose.orientation.x, last.pose.orientation.y, last.pose.orientation.z, last.pose.orientation.w])
+            #rot1 = rot.as_euler('zxy', degrees=True).shape
+            normal = [0, 0, 0.5]
+            normal = rot.apply(normal)
+
+            detected_point = [[last.pose.position.x-normal[0], last.pose.position.y-normal[1]], True]
+
+            print("FACE HAS BEEN DETECTED AT: ", detected_point[0], detected_point[1])
+
+
+
+            self.points.insert(0, detected_point)
+            self.last_marker += 1
             return True
         return False
 

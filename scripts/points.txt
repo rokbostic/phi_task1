@@ -1,0 +1,160 @@
+header:
+  stamp:
+    sec: 350
+    nanosec: 892000000
+  frame_id: map
+point:
+  x: -0.29914066195487976
+  y: -0.4778084456920624
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 355
+    nanosec: 386000000
+  frame_id: map
+point:
+  x: -0.25912463665008545
+  y: -1.5211772918701172
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 359
+    nanosec: 298000000
+  frame_id: map
+point:
+  x: 0.9102101922035217
+  y: -2.003636598587036
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 362
+    nanosec: 844000000
+  frame_id: map
+point:
+  x: 3.0870754718780518
+  y: -1.1366426944732666
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 365
+    nanosec: 826000000
+  frame_id: map
+point:
+  x: 1.1680845022201538
+  y: 0.1073119267821312
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 369
+    nanosec: 153000000
+  frame_id: map
+point:
+  x: 2.436110258102417
+  y: 1.1476428508758545
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 372
+    nanosec: 843000000
+  frame_id: map
+point:
+  x: 1.579767107963562
+  y: 1.976509690284729
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 376
+    nanosec: 848000000
+  frame_id: map
+point:
+  x: -0.21735739707946777
+  y: 2.079496145248413
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 380
+    nanosec: 301000000
+  frame_id: map
+point:
+  x: -1.2187423706054688
+  y: 1.2231603860855103
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 386
+    nanosec: 241000000
+  frame_id: map
+point:
+  x: -1.5642998218536377
+  y: 2.7969272136688232
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 390
+    nanosec: 861000000
+  frame_id: map
+point:
+  x: -1.5199897289276123
+  y: 4.329954624176025
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 394
+    nanosec: 461000000
+  frame_id: map
+point:
+  x: -1.4283584356307983
+  y: 3.2138195037841797
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 398
+    nanosec: 136000000
+  frame_id: map
+point:
+  x: 0.04295966401696205
+  y: 3.3601908683776855
+  z: -0.001434326171875
+---
+header:
+  stamp:
+    sec: 401
+    nanosec: 598000000
+  frame_id: map
+point:
+  x: 1.3514810800552368
+  y: 3.5450894832611084
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 405
+    nanosec: 342000000
+  frame_id: map
+point:
+  x: 2.2752091884613037
+  y: 2.8228840827941895
+  z: 0.002471923828125
+---
+header:
+  stamp:
+    sec: 412
+    nanosec: 8000000
+  frame_id: map
+point:
+  x: 2.4173405170440674
+  y: 1.9629559516906738
+  z: -0.001434326171875
+---
