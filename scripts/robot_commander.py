@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import math
 import random
 
 import playsound
@@ -334,7 +334,7 @@ class RobotCommander(Node):
             line_ = line.split()
             if line_[0] == "x:":
 
-                self.points.append([[0, 0], False])
+                self.points.append([[0, 0], False, 0])
 
                 last = self.points[len(self.points)-1]
 
@@ -343,6 +343,14 @@ class RobotCommander(Node):
                 last = self.points[len(self.points) - 1]
 
                 last[0][1] = float(line_[1])
+
+                self.points.append([last[0], last[1], 1 * math.pi/2])
+                self.points.append([last[0], last[1], 2 * math.pi/2])
+                self.points.append([last[0], last[1], 3 * math.pi/2])
+
+
+        print(self.points)
+
     
     # MOVE ROBOT TO POINT
     def moveToPoint(self):
@@ -370,7 +378,7 @@ class RobotCommander(Node):
 
         goal_pose.pose.position.x = x
         goal_pose.pose.position.y = y
-        goal_pose.pose.orientation = self.YawToQuaternion(random.random())
+        goal_pose.pose.orientation = self.YawToQuaternion(self.points[0][2])
 
         self.goToPose(goal_pose)
 
@@ -387,6 +395,7 @@ class RobotCommander(Node):
         if not detected:
             if self.points[0][1] == True:
                 playsound.playsound("greeting.wav")
+                print("Greetings face!")
                 time.sleep(1)
             self.points.pop(0)
 
@@ -404,20 +413,23 @@ class RobotCommander(Node):
     # DETECT FACE
     def isFaceDetected(self):
 
+        if self.markers_array is None:
+            return False
+
         ms = self.markers_array
 
         if len(ms) == self.last_marker:
 
             last = ms[len(ms)-1]
 
-
-
             rot = R.from_quat([last.pose.orientation.x, last.pose.orientation.y, last.pose.orientation.z, last.pose.orientation.w])
             #rot1 = rot.as_euler('zxy', degrees=True).shape
-            normal = [0, 0, 0.5]
+            normal = [0, 0, 0.75]
             normal = rot.apply(normal)
 
-            detected_point = [[last.pose.position.x-normal[0], last.pose.position.y-normal[1]], True]
+            jaw = rot.as_euler('xyz', degrees=False)[2]
+
+            detected_point = [[last.pose.position.x-normal[0], last.pose.position.y-normal[1]], True, jaw]
 
             print("FACE HAS BEEN DETECTED AT: ", detected_point[0], detected_point[1])
 
