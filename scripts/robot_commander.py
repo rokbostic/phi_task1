@@ -15,6 +15,9 @@
 
 import random
 
+import playsound
+
+
 from enum import Enum
 import time
 
@@ -27,6 +30,8 @@ from turtle_tf2_py.turtle_tf2_broadcaster import quaternion_from_euler
 
 from irobot_create_msgs.action import Dock, Undock
 from irobot_create_msgs.msg import DockStatus
+
+from visualization_msgs.msg import Marker
 
 import rclpy
 from rclpy.action import ActionClient
@@ -70,6 +75,11 @@ class RobotCommander(Node):
                                  self._dockCallback,
                                  qos_profile_sensor_data)
         
+        self.create_subscription(Marker,
+                                 'breadcrumbs',
+                                 self.peopleMarkerCallback,
+                                 qos_profile_sensor_data)
+        
         self.localization_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
                                                               'amcl_pose',
                                                               self._amclPoseCallback,
@@ -87,7 +97,7 @@ class RobotCommander(Node):
         self.dock_action_client = ActionClient(self, Dock, 'dock')
 
         self.points = []
-        
+
         self.get_logger().info(f"Robot commander has been initialized!")
 
         
@@ -301,92 +311,99 @@ class RobotCommander(Node):
         self.get_logger().debug(msg)
         return    
     
-	#EXTRACT POINTS
-	def getPointsFromFile():
-	
-	    points_txt = open("./points.txt")
-			
-		self.points = []
+    #EXTRACT POINTS
+    def getPointsFromFile(self):
 
-		f = points_txt
-		Lines = f.readlines()
+        points_txt = open("./points.txt")
 
-		for line in Lines:
-		    line_ = line.split()
-		    if line_[0] == "x:":
-		        points.append([0, 0])
-		        points[len(points) - 1][0] = float(line_[1])
-		    if line_[0] == "y:":
-		        points[len(points) - 1][1] = float(line_[1])
+        self.points = []
+
+        f = points_txt
+        Lines = f.readlines()
+
+        for line in Lines:
+            line_ = line.split()
+            if line_[0] == "x:":
+                self.points.append([0, 0])
+                self.points[len(self.points) - 1][0] = float(line_[1])
+            if line_[0] == "y:":
+                self.points[len(self.points) - 1][1] = float(line_[1])
     
     # MOVE ROBOT TO POINT
     def moveToPoint(self):
     
-    	x = self.points[0][0]
-    	y = self.points[0][1]
+        x = self.points[0][0]
+        y = self.points[0][1]
 
-		# Wait until Nav2 and Localizer are available
-		self.waitUntilNav2Active()
+        # Wait until Nav2 and Localizer are available
+        self.waitUntilNav2Active()
 
-		# Check if the robot is docked, only continue when a message is recieved
-		while self.is_docked is None:
-		    rclpy.spin_once(self, timeout_sec=0.5)
+        # Check if the robot is docked, only continue when a message is recieved
+        while self.is_docked is None:
+            rclpy.spin_once(self, timeout_sec=0.5)
 
-		# If it is docked, undock it first
-		if self.is_docked:
-		    self.undock()
-		
-		# Finally send it a goal to reach
-		goal_pose = PoseStamped()
-		goal_pose.header.frame_id = 'map'
-		goal_pose.header.stamp = self.get_clock().now().to_msg()
+        # If it is docked, undock it first
+        if self.is_docked:
+            self.undock()
 
-		goal_pose.pose.position.x = x
-		goal_pose.pose.position.y = y
-		goal_pose.pose.orientation = self.YawToQuaternion(random.random())
+        # Finally send it a goal to reach
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'map'
+        goal_pose.header.stamp = self.get_clock().now().to_msg()
 
-		self.goToPose(goal_pose)
-		
-		complete = self.isTaskComplete()
-		detected = self.isFaceDetected()
+        goal_pose.pose.position.x = x
+        goal_pose.pose.position.y = y
+        goal_pose.pose.orientation = self.YawToQuaternion(random.random())
 
-		while not complete and not detected:
-		    self.info("Waiting for the task to complete...")
-		    time.sleep(.1)
-		    
-		    complete = self.isTaskComplete()
-		    detected = self.isFaceDetected()
-		    
-		    
-		    
-		
-		if not detected:
-			points.pop(0)
-		
-		#self.spin(-0.57)
+        self.goToPose(goal_pose)
 
-		return
-		
-	# DETECT FACE
-	def isFaceDetected():
-	
-		return False
-		
-		        
-	
-	# CIRCLE AROUND THE ARENA
-	def circuit():
-		while len(self.points) != 0:
-			move_to_point()
-			
+        complete = self.isTaskComplete()
+        detected = self.isFaceDetected()
+
+        while not complete and not detected:
+            self.info("Waiting for the task to complete...")
+            time.sleep(.1)
+
+            complete = self.isTaskComplete()
+            detected = self.isFaceDetected()
+
+        if not detected:
+            self.points.pop(0)
+
+        #self.spin(-0.57)
+
+        return
+
+
+    def peopleMarkerCallback(self, msg):
+        self.detected_point = [msg.pose.position.x, msg.pose.position.y]
+
+
+
+    # DETECT FACE
+    def isFaceDetected(self):
+        if self.detected_point is not None:
+            self.points.insert(0, self.detected_point)
+            playsound.playsound("greeting.wav")
+            self.detected_point = None
+            return True
+        return False
+
+
+
+    # CIRCLE AROUND THE ARENA
+    def circuit(self):
+        while len(self.points) != 0:
+            self.moveToPoint()
+
    
     
 def main(args=None):
-            
+
     rclpy.init()
     rc = RobotCommander()
 
-	rc.getPointsFromFile()
+    rc.getPointsFromFile()
     rc.circuit()
         
         
