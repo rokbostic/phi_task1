@@ -84,7 +84,7 @@ class RobotCommander(Node):
                                  qos_profile_sensor_data)
         
         self.create_subscription(MarkerArray,
-                                 'people_markers',
+                                 '/task_1/people_markers',
                                  self.peopleMarkerCallback,
                                  qos_profile_sensor_data)
         
@@ -323,7 +323,7 @@ class RobotCommander(Node):
     def getPointsFromFile(self):
 
         #print(os.getcwd())
-        points_txt = open("points.txt")
+        points_txt = open("points2.txt")
 
         self.points = []
 
@@ -344,13 +344,12 @@ class RobotCommander(Node):
 
                 last[0][1] = float(line_[1])
 
-                self.points.append([last[0], last[1], 1 * math.pi/2])
-                self.points.append([last[0], last[1], 2 * math.pi/2])
-                self.points.append([last[0], last[1], 3 * math.pi/2])
+                self.points.append([last[0], last[1], 1 * 2 * math.pi/3])
+                self.points.append([last[0], last[1], 2 * 2 * math.pi/3])
+                self.points.append([last[0], last[1], 3 * 2 * math.pi/3])
 
 
         print(self.points)
-
     
     # MOVE ROBOT TO POINT
     def moveToPoint(self):
@@ -429,7 +428,7 @@ class RobotCommander(Node):
 
             jaw = rot.as_euler('xyz', degrees=False)[2]
 
-            detected_point = [[last.pose.position.x-normal[0], last.pose.position.y-normal[1]], True, jaw]
+            detected_point = [[last.pose.position.x + normal[0], last.pose.position.y + normal[1]], True, jaw]
 
             print("FACE HAS BEEN DETECTED AT: ", detected_point[0], detected_point[1])
 

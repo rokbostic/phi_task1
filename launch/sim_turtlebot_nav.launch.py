@@ -33,6 +33,8 @@ ARGUMENTS = [
                           choices=['true', 'false'], description='Start rviz.'),
     DeclareLaunchArgument('world', default_value='dis',
                           description='Ignition World'),
+    DeclareLaunchArgument('world', default_value='task',
+                 description='Ignition World'),
     DeclareLaunchArgument('model', default_value='standard',
                           choices=['standard', 'lite'],
                           description='Turtlebot4 Model'),
