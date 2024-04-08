@@ -64,12 +64,12 @@ class detect_faces(Node):
         
         self.bridge = CvBridge()
         self.scan = None
-        marker_topic = "/task_1/people_markers"
+        marker_topic = "/people_markers"
         self.pointcloud_sub = self.create_subscription(PointCloud2, "/oakd/rgb/preview/depth/points", self.pointcloud_callback, qos_profile_sensor_data,
                                                        callback_group=client_callback_group )
         self.marker_pub = self.create_publisher(MarkerArray, marker_topic, QoSReliabilityPolicy.BEST_EFFORT)
         self.image_pub  = self.create_publisher(Image, "/image", QoSReliabilityPolicy.BEST_EFFORT)
-        self.people_cloud_pub  = self.create_publisher(PointCloud2, "/task_1/face_points", qos_profile)
+        self.people_cloud_pub  = self.create_publisher(PointCloud2, "/points2", qos_profile)
 
         self.model = YOLO("yolov8n.pt")
 

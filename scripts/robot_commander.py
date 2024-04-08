@@ -14,8 +14,8 @@
 # limitations under the License.
 import math
 import random
-
-import playsound
+import numpy as np
+#import playsound
 
 import os
 
@@ -27,10 +27,11 @@ import time
 
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Duration
-from geometry_msgs.msg import Quaternion, PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import Quaternion, PoseStamped, PoseWithCovarianceStamped, Point
 from lifecycle_msgs.srv import GetState
 from nav2_msgs.action import Spin, NavigateToPose
 from turtle_tf2_py.turtle_tf2_broadcaster import quaternion_from_euler
+from visualization_msgs.msg import Marker
 
 from irobot_create_msgs.action import Dock, Undock
 from irobot_create_msgs.msg import DockStatus
@@ -63,12 +64,12 @@ class RobotCommander(Node):
     def __init__(self, node_name='robot_commander', namespace=''):
 
 
-        self.last_marker = 1
+        self.last_marker = -1
 
         super().__init__(node_name=node_name, namespace=namespace)
-        
+
         self.pose_frame_id = 'map'
-        
+
         # Flags and helper variables
         self.goal_handle = None
         self.result_future = None
@@ -82,36 +83,37 @@ class RobotCommander(Node):
                                  'dock_status',
                                  self._dockCallback,
                                  qos_profile_sensor_data)
-        
+
         self.create_subscription(MarkerArray,
-                                 '/task_1/people_markers',
+                                 'people_markers',
                                  self.peopleMarkerCallback,
                                  qos_profile_sensor_data)
-        
+
         self.localization_pose_sub = self.create_subscription(PoseWithCovarianceStamped,
                                                               'amcl_pose',
                                                               self._amclPoseCallback,
                                                               amcl_pose_qos)
-        
+
         # ROS2 publishers
         self.initial_pose_pub = self.create_publisher(PoseWithCovarianceStamped,
                                                       'initialpose',
                                                       10)
-        
+
         # ROS2 Action clients
         self.nav_to_pose_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
         self.spin_client = ActionClient(self, Spin, 'spin')
         self.undock_action_client = ActionClient(self, Undock, 'undock')
         self.dock_action_client = ActionClient(self, Dock, 'dock')
+        self.marker_pub = self.create_publisher(Marker, "/aproach_point", QoSReliabilityPolicy.BEST_EFFORT)
 
         self.points = []
-
+        self.markers_array = None
         self.get_logger().info(f"Robot commander has been initialized!")
 
-        
+
     def destroyNode(self):
         self.nav_to_pose_client.destroy()
-        super().destroy_node()     
+        super().destroy_node()
 
     def goToPose(self, pose, behavior_tree=''):
         """Send a `NavToPose` action request."""
@@ -157,7 +159,7 @@ class RobotCommander(Node):
 
         self.result_future = self.goal_handle.get_result_async()
         return True
-    
+
     def undock(self):
         """Perform Undock action."""
         self.info('Undocking...')
@@ -272,7 +274,7 @@ class RobotCommander(Node):
                 self.debug(f'Result of get_state: {state}')
             time.sleep(2)
         return
-    
+
     def YawToQuaternion(self, angle_z = 0.):
         quat_tf = quaternion_from_euler(0, 0, angle_z)
 
@@ -290,7 +292,7 @@ class RobotCommander(Node):
         self.debug('Received action feedback message')
         self.feedback = msg.feedback
         return
-    
+
     def _dockCallback(self, msg: DockStatus):
         self.is_docked = msg.is_docked
 
@@ -317,8 +319,8 @@ class RobotCommander(Node):
 
     def debug(self, msg):
         self.get_logger().debug(msg)
-        return    
-    
+        return
+
     #EXTRACT POINTS
     def getPointsFromFile(self):
 
@@ -344,18 +346,17 @@ class RobotCommander(Node):
 
                 last[0][1] = float(line_[1])
 
-                self.points.append([last[0], last[1], 1 * 2 * math.pi/3])
-                self.points.append([last[0], last[1], 2 * 2 * math.pi/3])
-                self.points.append([last[0], last[1], 3 * 2 * math.pi/3])
-
+                for i in range(3):
+                    self.points.append([last[0], last[1], i * 2 * math.pi/3])
 
         print(self.points)
-    
+
+
     # MOVE ROBOT TO POINT
     def moveToPoint(self):
 
         pos = self.points[0][0]
-    
+
         x = pos[0]
         y = pos[1]
 
@@ -393,7 +394,7 @@ class RobotCommander(Node):
 
         if not detected:
             if self.points[0][1] == True:
-                playsound.playsound("greeting.wav")
+                #playsound.playsound("greeting.wav")
                 print("Greetings face!")
                 time.sleep(1)
             self.points.pop(0)
@@ -415,27 +416,47 @@ class RobotCommander(Node):
         if self.markers_array is None:
             return False
 
-        ms = self.markers_array
-
-        if len(ms) == self.last_marker:
-
-            last = ms[len(ms)-1]
+        if len(self.markers_array) > self.last_marker + 1:
+            self.last_marker += 1
+            last = self.markers_array[self.last_marker]
 
             rot = R.from_quat([last.pose.orientation.x, last.pose.orientation.y, last.pose.orientation.z, last.pose.orientation.w])
-            #rot1 = rot.as_euler('zxy', degrees=True).shape
-            normal = [0, 0, 0.75]
-            normal = rot.apply(normal)
-
+            stand_off_dist = .4
+            normal = np.array([[1, 0, 0]]) * stand_off_dist
+            noraml_rotated = rot.apply(normal)
             jaw = rot.as_euler('xyz', degrees=False)[2]
+            offset_x, offset_y, _ = noraml_rotated[0]
+            aproach_point = [[last.pose.position.x - offset_x, last.pose.position.y - offset_y], True, jaw]
 
-            detected_point = [[last.pose.position.x + normal[0], last.pose.position.y + normal[1]], True, jaw]
+            print("FACE HAS BEEN DETECTED AT: ", aproach_point[0], aproach_point[1])
 
-            print("FACE HAS BEEN DETECTED AT: ", detected_point[0], detected_point[1])
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.lifetime = rclpy.time.Duration(seconds=0).to_msg()
+            marker.type = 2
+            marker.id = self.last_marker
+            scale = .1
+            marker.scale.x = scale * 1
+            marker.scale.y = scale * 1
+            marker.scale.z = scale * 1
+            marker.color.r = 1.0
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+            marker.color.a = 1.0
+
+            t = Point()
+            x, y, = aproach_point[0]
+            t.x = x
+            t.y = y
+            t.z = 0.
+            marker.pose.position = t
+            marker.pose.orientation = last.pose.orientation
+
+            self.marker_pub.publish(marker)
 
 
-
-            self.points.insert(0, detected_point)
-            self.last_marker += 1
+            self.points.insert(0, aproach_point)
             return True
         return False
 
@@ -446,8 +467,8 @@ class RobotCommander(Node):
         while len(self.points) != 0:
             self.moveToPoint()
 
-   
-    
+
+
 def main(args=None):
 
     rclpy.init()
@@ -455,8 +476,8 @@ def main(args=None):
 
     rc.getPointsFromFile()
     rc.circuit()
-        
-        
+
+
     rc.destroyNode()
 
 
